@@ -7,9 +7,7 @@ output:
     keep_md: yes
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+
 
 ## Summary
 
@@ -21,7 +19,8 @@ With data from the *WLE dataset* of Velloso, E.; Bulling, A.; Gellersen, H.; Ugu
 
 Data is downloaded and loaded, and R libraries loaded.
 
-```{r getdata,message=FALSE}
+
+```r
 # setwd("C:/Users/david/Documents/R/datasciencecoursera/datascience-course8/project")
 # download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", "pml-training.csv")
 # download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv","pml-testing.csv")
@@ -40,7 +39,8 @@ Note that "classe" is the last (160th) variable in pml.training, which is replac
 
 First we kill off all variables that have NA or blank values. We shall not be using the timestamps (raw_timestamp_part_[12],cvdt_timestamp) or new_window (as all "no") or "X" (no info).  This reduces the number of variables from 160 to 55. There are 19,622 observations.
 
-```{r killNA}
+
+```r
 num.nas<-function (var.name) {sum(is.na(pml.training[,var.name]))}
 no.nas.index<-mapply(num.nas,names(pml.training))==0
 pml.testing<-pml.testing[,no.nas.index];pml.training<-pml.training[,no.nas.index]
@@ -50,7 +50,8 @@ pml.testing<-select(pml.testing,-col.omit);pml.training<-select(pml.training,-co
 
 We split the provided data into training and validation sets.
 
-```{r build}
+
+```r
 set.seed(2)
 inTrain <- createDataPartition(y=pml.training$classe, p=0.7, list=FALSE)
 training <- pml.training[inTrain,]
@@ -75,7 +76,8 @@ The *classe* variable was the outcome, from 'A' through 'E'. The model was built
 
 It was requested to include some Cross Validation, and this was chosen with a small parameter of 2. The caret package handles the details.
 
-```{r train}
+
+```r
 set.seed(3)  
 system.time({modFit <- train(classe~ .,data=training,  
                              method="rf",  
@@ -86,24 +88,39 @@ system.time({modFit <- train(classe~ .,data=training,
                              allowParallel=TRUE)})
 ```
 
+```
+##    user  system elapsed 
+##  103.41    2.06  112.71
+```
+
 A modest amount of time, 100 seconds or so, was consumed to build this model.
 
 We first confirm that the model (*modFit*) performs adequately on the training set itself.
 
-```{r training}
+
+```r
 right.tr<-sum(predict.train(modFit,training)==training$classe)
 total.tr<-length(training$classe)
 proportion.tr<-right.tr/total.tr
 c(right.tr, total.tr,proportion.tr)
 ```
 
+```
+## [1] 13737 13737     1
+```
+
 Perhaps surprisingly, this model gets 100% of the 13,737 outcomes in the training partition correct. This raises the specter of whether over-fitting will be a problem. We now check the performance on the remaining 5,885 observations in the validation partition.
 
-```{r validate}
+
+```r
 right.v<-sum(predict.train(modFit,validation)==validation$classe)
 total.v<-length(validation$classe)
 proportion.v<-right.v/total.v
 c(right.v, total.v,proportion.v)
+```
+
+```
+## [1] 5864.0000000 5885.0000000    0.9964316
 ```
 
 At 99.64% (5864/5885), we are satisfied with the performance here.  "Good enough for government work." 
@@ -114,9 +131,18 @@ The error rate of 0.00% on the sample that the model was trained on rose slightl
 
 We have a final test sample to apply this to, of 20 observations. As 0.36% of 20 = 0.072 << 1, we have some confidence that these predictions will be all correct.
 
-```{r test}
+
+```r
 testing.result<-predict.train(modFit,pml.testing)
 t(testing.result)
+```
+
+```
+##      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10] [,11] [,12] [,13]
+## [1,] B    A    B    A    A    E    D    B    A    A     B     C     B    
+##      [,14] [,15] [,16] [,17] [,18] [,19] [,20]
+## [1,] A     E     E     A     B     B     B    
+## Levels: A B C D E
 ```
 
 And indeed the submission was graded as 100% successful, 20/20.
